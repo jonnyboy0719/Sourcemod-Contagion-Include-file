@@ -60,7 +60,7 @@ stock CONTAGION_SetStamina(client, Float:stamina)
 }
 
 /**
- * Sets extra ammunition for any weapon
+ * Gets extra ammunition for any weapon
  * #Note1: This doesn't apply for melee weapons
  * 
  * @param entity		Entity Index.
