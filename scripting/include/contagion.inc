@@ -6,6 +6,11 @@
 #include <sdktools>
 
 /**
+	Smlib fix
+**/
+#define MAX_WEAPONS				48	// Max number of weapons availabl
+
+/**
  * Maximum length of a weapon name string
  */
 #define WEAPONS_MAX_LENGTH 32
@@ -85,19 +90,6 @@ stock CONTAGION_SetStamina(client, Float:stamina)
 }
 
 /**
- * Gets extra ammunition for any weapon
- * #Note1: This doesn't apply for melee weapons
- * 
- * @param entity		Entity Index.
- * @param ammo			Set extra ammunition
- * @noreturn
- */
-stock CONTAGION_GetExtraAmmo(entity)
-{
-	return GetEntProp(entity, Prop_Send, "m_iExtraPrimaryAmmo");
-}
-
-/**
  * Sets extra ammunition for any weapon
  * #Note1: This doesn't apply for melee weapons
  * 
@@ -107,7 +99,23 @@ stock CONTAGION_GetExtraAmmo(entity)
  */
 stock CONTAGION_SetExtraAmmo(entity, ammo)
 {
-	return SetEntProp(entity, Prop_Send, "m_iExtraPrimaryAmmo", ammo);
+	new GetCurrentAmmo = GetEntProp(entity, Prop_Send, "m_iClip1");
+	return SetEntProp(entity, Prop_Send, "m_iClip1", GetCurrentAmmo + ammo);
+}
+
+/**
+ * Sets ammunition for any weapon
+ * #Note1: This doesn't apply for melee weapons
+ * 
+ * @param entity		Entity Index.
+ * @param ammo			Set extra ammunition
+ * @noreturn
+ */
+stock CONTAGION_SetAmmo(client, weapon, ammo)
+{
+	new offset_ammo = FindDataMapOffs(client, "m_iAmmo");
+	new offset = offset_ammo + (Weapon_GetPrimaryAmmoType(weapon) * 4);
+	SetEntData(client, offset, ammo, 4, true);
 }
 
 /**
@@ -133,6 +141,19 @@ stock CONTAGION_SetSurvivorCharacter(client, index)
 	return SetEntProp(client, Prop_Send, "m_survivorCharacter", index);
 }
 
+/**
+ * Checks if a client has a specific weapon.
+ * 
+ * @param client	The client index.
+ * @param weapon	The weapon classname.
+ */
+stock CONTAGION_GiveClientWeapon(client, const String:weapon[], ammo=0)
+{
+	GivePlayerItem(client, weapon);
+	new GetWeapon = Client_GetWeapon(client, weapon);
+	if (ammo > 0)
+		CONTAGION_SetAmmo(client, GetWeapon, ammo);
+}
 
 /**
  * Checks if a client has a specific weapon.
@@ -272,5 +293,77 @@ stock CONTAGION_SetNewHealth(client, health, newmaxhealth)
 	
 	SetEntProp(client, Prop_Send, "m_iMaxHealth", newmaxhealth);
 	SetEntProp(client, Prop_Send, "m_iHealth", health);
+}
+
+/*
+	Smlib fix
+*/
+stock Client_GetWeapon(client, const String:className[])
+{
+	new offset = Client_GetWeaponsOffset(client) - 4;
+
+	for (new i=0; i < MAX_WEAPONS; i++) {
+		offset += 4;
+
+		new weapon = GetEntDataEnt2(client, offset);
+		
+		if (!Weapon_IsValid(weapon)) {
+			continue;
+		}
+		
+		if (Entity_ClassNameMatches(weapon, className)) {
+			return weapon;
+		}
+	}
+	
+	return INVALID_ENT_REFERENCE;
+}
+
+stock Weapon_IsValid(weapon)
+{
+	if (!IsValidEdict(weapon)) {
+		return false;
+	}
+
+	return Entity_ClassNameMatches(weapon, "weapon_", true);
+}
+
+stock Client_GetWeaponsOffset(client)
+{
+	static offset = -1;
+
+	if (offset == -1) {
+		offset = FindDataMapOffs(client, "m_hMyWeapons");
+	}
+	
+	return offset;
+}
+
+stock bool:Entity_ClassNameMatches(entity, const String:className[], partialMatch=false)
+{
+	decl String:entity_className[64];
+	Entity_GetClassName(entity, entity_className, sizeof(entity_className));
+
+	if (partialMatch) {
+		return (StrContains(entity_className, className) != -1);
+	}
+	
+	return StrEqual(entity_className, className);
+}
+
+stock Entity_GetClassName(entity, String:buffer[], size)
+{
+	GetEntPropString(entity, Prop_Data, "m_iClassname", buffer, size);
+	
+	if (buffer[0] == '\0') {
+		return false;
+	}
+	
+	return true;
+}
+
+stock Weapon_GetPrimaryAmmoType(weapon)
+{
+	return GetEntProp(weapon, Prop_Data, "m_iPrimaryAmmoType");
 }
 
