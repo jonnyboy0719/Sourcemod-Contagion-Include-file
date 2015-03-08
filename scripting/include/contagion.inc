@@ -134,7 +134,6 @@ stock CONTAGION_GetSurvivorCharacter(client)
  * 
  * @param client		Client Index.
  * @return				Set survivor character
- * @noreturn
  */
 stock CONTAGION_SetSurvivorCharacter(client, index)
 {
@@ -142,17 +141,55 @@ stock CONTAGION_SetSurvivorCharacter(client, index)
 }
 
 /**
- * Checks if a client has a specific weapon.
+ * Gives the client a specific weapon
  * 
  * @param client	The client index.
  * @param weapon	The weapon classname.
+ * @param ammo		The weapon start ammo.
  */
 stock CONTAGION_GiveClientWeapon(client, const String:weapon[], ammo=0)
 {
+	if (StrEqual(weapon,""))
+		return;
+	
 	GivePlayerItem(client, weapon);
 	new GetWeapon = Client_GetWeapon(client, weapon);
 	if (ammo > 0)
 		CONTAGION_SetAmmo(client, GetWeapon, ammo);
+}
+
+/**
+ * Checks if a client has a specific weapon. and then gives ammo for it (primary ammo)
+ * 
+ * @param client	The client index.
+ * @param weapon	The weapon classname.
+ * @param ammo		The weapon ammo.
+ */
+stock CONTAGION_ClientGiveExtraAmmo(client, const String:weapon[], ammo=0)
+{
+	new weapons[WeaponsSlot];
+	CONTAGION_GetClientWeapons(client, weapons);
+	
+	decl String:classname[64];
+	
+	// x = slot index
+	for (new x = 0; x < WEAPONS_SLOTS_MAX; x++)
+	{
+		// If slot is empty, then stop.
+		if (weapons[x] == -1)
+		{
+			continue;
+		}
+		
+		GetEdictClassname(weapons[x], classname, sizeof(classname));
+		if (StrEqual(weapon, classname, false))
+		{
+			if (ammo > 0)
+				CONTAGION_SetExtraAmmo(weapons[x], ammo);
+			else
+				ThrowError("You need to specify how much ammo you want to give to the client's weapon (%s)!", weapon);
+		}
+	}
 }
 
 /**
@@ -163,7 +200,6 @@ stock CONTAGION_GiveClientWeapon(client, const String:weapon[], ammo=0)
  */
 stock bool:CONTAGION_ClientHasWeapon(client, const String:weapon[])
 {
-	// Get all of client's current weapons.
 	new weapons[WeaponsSlot];
 	CONTAGION_GetClientWeapons(client, weapons);
 	
@@ -188,6 +224,35 @@ stock bool:CONTAGION_ClientHasWeapon(client, const String:weapon[])
 	}
 	
 	return false;
+}
+
+/**
+ * Checks all weapons that the client has.
+ * 
+ * @param client	The client index.
+ * @param weapon	The weapon classname.
+ */
+stock CONTAGION_CheckClientWeapons(client)
+{
+	new weapons[WeaponsSlot];
+	CONTAGION_GetClientWeapons(client, weapons);
+	
+	decl String:classname[64];
+	
+	PrintToServer("[[ %N's Weapons ]]", client);
+	
+	// x = slot index
+	for (new x = 0; x < WEAPONS_SLOTS_MAX; x++)
+	{
+		// If slot is empty, then stop.
+		if (weapons[x] == -1)
+		{
+			continue;
+		}
+		
+		GetEdictClassname(weapons[x], classname, sizeof(classname));
+		PrintToServer("[[ Slot: %d | Weapon: %s ]]", x, classname);
+	}
 }
 
 /**
@@ -275,6 +340,61 @@ stock CONTAGION_RemoveAllWeapons(client)
 	{
 		CONTAGION_RemoveWeaponSlot(client, i);
 	}
+}
+
+/**
+ * Get the survivor max speed
+ * 
+ * @param client		Client Index.
+ * @return				Get survivor speed
+ */
+stock Float:CONTAGION_GetSurvivorSpeed(client)
+{
+	return GetEntPropFloat(client, Prop_Send, "m_flMaxspeed");
+}
+
+/**
+ * If the survivor is sprinting
+ * 
+ * @param client		Client Index.
+ * @return				Get sprinting bool
+ */
+stock CONTAGION_GetSurvivorSprinting(client)
+{
+	return GetEntProp(client, Prop_Send, "m_bIsSprinting");
+}
+
+/**
+ * If the survivor has sprinting penalty
+ * 
+ * @param client		Client Index.
+ * @return				Get penalty bool
+ */
+stock CONTAGION_GaveSprintPenalty(client)
+{
+	return GetEntProp(client, Prop_Send, "m_bGaveSprintPenalty");
+}
+
+/**
+ * If the survivor has empty sprinting penalty
+ * 
+ * @param client		Client Index.
+ * @return				Get penalty bool
+ */
+stock CONTAGION_EmptySprintPenalty(client)
+{
+	return GetEntProp(client, Prop_Send, "m_bEmptySprintPenalty");
+}
+
+/**
+ * Get the survivor stamina
+ * 
+ * @param client		Client Index.
+ * @return				Get stamina
+ */
+stock Float:CONTAGION_GetSurvivorStamina(client)
+{
+	return GetEntPropFloat(client, Prop_Send, "m_flStamina");
 }
 
 /**
